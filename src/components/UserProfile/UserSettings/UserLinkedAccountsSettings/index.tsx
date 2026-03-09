@@ -70,10 +70,10 @@ const UserLinkedAccountsSettings = () => {
   const accounts: LinkedAccount[] = useMemo(() => {
     const accounts: LinkedAccount[] = [];
     if (!user) return accounts;
-    if (user.plexUsername || user.userType === UserType.PLEX)
+    if (user.plexUsername)
       accounts.push({
         type: LinkedAccountType.Plex,
-        username: user.plexUsername ?? 'Plex',
+        username: user.plexUsername,
       });
     if (user.userType === UserType.EMBY && user.jellyfinUsername)
       accounts.push({
