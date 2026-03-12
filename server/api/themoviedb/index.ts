@@ -292,6 +292,27 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
         43200
       );
 
+      if (
+        language !== 'en' &&
+        !data.videos?.results?.some((v) => v.type === 'Trailer')
+      ) {
+        const fallback = await this.get<TmdbMovieDetails>(
+          `/movie/${movieId}`,
+          {
+            params: {
+              language,
+              append_to_response: 'videos',
+              include_video_language: 'en',
+            },
+          },
+          43200
+        );
+
+        if (fallback.videos) {
+          data.videos = fallback.videos;
+        }
+      }
+
       return data;
     } catch (e) {
       throw new Error(`[TMDB] Failed to fetch movie details: ${e.message}`);
@@ -318,6 +339,27 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
         },
         43200
       );
+
+      if (
+        language !== 'en' &&
+        !data.videos?.results?.some((v) => v.type === 'Trailer')
+      ) {
+        const fallback = await this.get<TmdbTvDetails>(
+          `/tv/${tvId}`,
+          {
+            params: {
+              language,
+              append_to_response: 'videos',
+              include_video_language: 'en',
+            },
+          },
+          43200
+        );
+
+        if (fallback.videos) {
+          data.videos = fallback.videos;
+        }
+      }
 
       return data;
     } catch (e) {
