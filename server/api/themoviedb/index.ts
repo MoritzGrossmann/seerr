@@ -293,7 +293,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
       );
 
       if (
-        language !== 'en' &&
+        (!language || !language.startsWith('en')) &&
         !data.videos?.results?.some((video) => video.type === 'Trailer')
       ) {
         const fallback = await this.get<TmdbMovieDetails>(
@@ -354,7 +354,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
       );
 
       if (
-        language !== 'en' &&
+        (!language || !language.startsWith('en')) &&
         !data.videos?.results?.some((video) => video.type === 'Trailer')
       ) {
         const fallback = await this.get<TmdbTvDetails>(
