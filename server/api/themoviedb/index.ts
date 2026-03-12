@@ -294,7 +294,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
 
       if (
         language !== 'en' &&
-        !data.videos?.results?.some((v) => v.type === 'Trailer')
+        !data.videos?.results?.some((video) => video.type === 'Trailer')
       ) {
         const fallback = await this.get<TmdbMovieDetails>(
           `/movie/${movieId}`,
@@ -308,8 +308,21 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
           43200
         );
 
-        if (fallback.videos) {
-          data.videos = fallback.videos;
+        const localizedVideos = data.videos?.results ?? [];
+        const localizedVideoKeys = new Set(
+          localizedVideos.map((video) => video.key)
+        );
+        const englishFallbackTrailers =
+          fallback.videos?.results?.filter(
+            (video) =>
+              video.type === 'Trailer' && !localizedVideoKeys.has(video.key)
+          ) ?? [];
+
+        if (englishFallbackTrailers.length > 0) {
+          data.videos = {
+            ...(data.videos ?? { results: [] }),
+            results: [...localizedVideos, ...englishFallbackTrailers],
+          };
         }
       }
 
@@ -342,7 +355,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
 
       if (
         language !== 'en' &&
-        !data.videos?.results?.some((v) => v.type === 'Trailer')
+        !data.videos?.results?.some((video) => video.type === 'Trailer')
       ) {
         const fallback = await this.get<TmdbTvDetails>(
           `/tv/${tvId}`,
@@ -356,8 +369,21 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
           43200
         );
 
-        if (fallback.videos) {
-          data.videos = fallback.videos;
+        const localizedVideos = data.videos?.results ?? [];
+        const localizedVideoKeys = new Set(
+          localizedVideos.map((video) => video.key)
+        );
+        const englishFallbackTrailers =
+          fallback.videos?.results?.filter(
+            (video) =>
+              video.type === 'Trailer' && !localizedVideoKeys.has(video.key)
+          ) ?? [];
+
+        if (englishFallbackTrailers.length > 0) {
+          data.videos = {
+            ...(data.videos ?? { results: [] }),
+            results: [...localizedVideos, ...englishFallbackTrailers],
+          };
         }
       }
 
