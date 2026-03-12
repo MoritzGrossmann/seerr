@@ -296,33 +296,37 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
         (!language || !language.startsWith('en')) &&
         !data.videos?.results?.some((video) => video.type === 'Trailer')
       ) {
-        const fallback = await this.get<TmdbMovieDetails>(
-          `/movie/${movieId}`,
-          {
-            params: {
-              language,
-              append_to_response: 'videos',
-              include_video_language: 'en',
+        try {
+          const fallback = await this.get<TmdbMovieDetails>(
+            `/movie/${movieId}`,
+            {
+              params: {
+                language,
+                append_to_response: 'videos',
+                include_video_language: 'en',
+              },
             },
-          },
-          43200
-        );
+            43200
+          );
 
-        const localizedVideos = data.videos?.results ?? [];
-        const localizedVideoKeys = new Set(
-          localizedVideos.map((video) => video.key)
-        );
-        const englishFallbackTrailers =
-          fallback.videos?.results?.filter(
-            (video) =>
-              video.type === 'Trailer' && !localizedVideoKeys.has(video.key)
-          ) ?? [];
+          const localizedVideos = data.videos?.results ?? [];
+          const localizedVideoKeys = new Set(
+            localizedVideos.map((video) => video.key)
+          );
+          const englishFallbackTrailers =
+            fallback.videos?.results?.filter(
+              (video) =>
+                video.type === 'Trailer' && !localizedVideoKeys.has(video.key)
+            ) ?? [];
 
-        if (englishFallbackTrailers.length > 0) {
-          data.videos = {
-            ...(data.videos ?? { results: [] }),
-            results: [...localizedVideos, ...englishFallbackTrailers],
-          };
+          if (englishFallbackTrailers.length > 0) {
+            data.videos = {
+              ...(data.videos ?? { results: [] }),
+              results: [...localizedVideos, ...englishFallbackTrailers],
+            };
+          }
+        } catch {
+          // Ignore trailer fallback failures; return the original data.
         }
       }
 
@@ -357,33 +361,37 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
         (!language || !language.startsWith('en')) &&
         !data.videos?.results?.some((video) => video.type === 'Trailer')
       ) {
-        const fallback = await this.get<TmdbTvDetails>(
-          `/tv/${tvId}`,
-          {
-            params: {
-              language,
-              append_to_response: 'videos',
-              include_video_language: 'en',
+        try {
+          const fallback = await this.get<TmdbTvDetails>(
+            `/tv/${tvId}`,
+            {
+              params: {
+                language,
+                append_to_response: 'videos',
+                include_video_language: 'en',
+              },
             },
-          },
-          43200
-        );
+            43200
+          );
 
-        const localizedVideos = data.videos?.results ?? [];
-        const localizedVideoKeys = new Set(
-          localizedVideos.map((video) => video.key)
-        );
-        const englishFallbackTrailers =
-          fallback.videos?.results?.filter(
-            (video) =>
-              video.type === 'Trailer' && !localizedVideoKeys.has(video.key)
-          ) ?? [];
+          const localizedVideos = data.videos?.results ?? [];
+          const localizedVideoKeys = new Set(
+            localizedVideos.map((video) => video.key)
+          );
+          const englishFallbackTrailers =
+            fallback.videos?.results?.filter(
+              (video) =>
+                video.type === 'Trailer' && !localizedVideoKeys.has(video.key)
+            ) ?? [];
 
-        if (englishFallbackTrailers.length > 0) {
-          data.videos = {
-            ...(data.videos ?? { results: [] }),
-            results: [...localizedVideos, ...englishFallbackTrailers],
-          };
+          if (englishFallbackTrailers.length > 0) {
+            data.videos = {
+              ...(data.videos ?? { results: [] }),
+              results: [...localizedVideos, ...englishFallbackTrailers],
+            };
+          }
+        } catch {
+          // Ignore trailer fallback failures; return the original data.
         }
       }
 
