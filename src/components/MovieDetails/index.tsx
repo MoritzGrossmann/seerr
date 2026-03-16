@@ -106,6 +106,9 @@ const messages = defineMessages('components.MovieDetails', {
   watchlistError: 'Something went wrong. Please try again.',
   removefromwatchlist: 'Remove From Watchlist',
   addtowatchlist: 'Add To Watchlist',
+  imdbId: 'IMDB ID',
+  imdbIdCopied: 'IMDB ID copied to clipboard',
+  imdbIdCopyFailed: 'IMDB ID copy failed',
 });
 
 interface MovieDetailsProps {
@@ -164,6 +167,25 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
   const closeBlocklistModal = useCallback(
     () => setShowBlocklistModal(false),
     []
+  );
+
+  const handleCopyImdbId = useCallback(
+    async (imdbId: string | undefined) => {
+      if (!imdbId) return;
+      try {
+        await navigator.clipboard.writeText(imdbId);
+        addToast(intl.formatMessage(messages.imdbIdCopied), {
+          appearance: 'success',
+          autoDismiss: true,
+        });
+      } catch (err) {
+        addToast(intl.formatMessage(messages.imdbIdCopyFailed), {
+          appearance: 'error',
+          autoDismiss: true,
+        });
+      }
+    },
+    [addToast, intl]
   );
 
   const { mediaUrl: plexUrl, mediaUrl4k: plexUrl4k } = useDeepLinks({
@@ -1056,6 +1078,25 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                       </span>
                     </button>
                   )}
+                </span>
+              </div>
+            )}
+            {data.externalIds.imdbId && (
+              <div className="media-fact">
+                <span>{intl.formatMessage(messages.imdbId)}</span>
+                <span
+                  className="media-fact-value cursor-pointer underline decoration-dotted underline-offset-2 transition hover:text-gray-200"
+                  onClick={() => handleCopyImdbId(data.externalIds.imdbId)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCopyImdbId(data.externalIds.imdbId);
+                    }
+                  }}
+                >
+                  {data.externalIds.imdbId}
                 </span>
               </div>
             )}

@@ -29,7 +29,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/seerr-team/seerr.git"
+    "url": "https://github.com/MoritzGrossmann/seerr.git"
   },
   "license": "MIT",
   "dependencies": {
