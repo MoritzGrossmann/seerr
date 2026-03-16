@@ -105,6 +105,12 @@ const messages = defineMessages('components.TvDetails', {
   watchlistError: 'Something went wrong. Please try again.',
   removefromwatchlist: 'Remove From Watchlist',
   addtowatchlist: 'Add To Watchlist',
+  imdbId: 'IMDB ID',
+  imdbIdCopied: 'IMDB ID copied to clipboard',
+  imdbIdCopyFailed: 'IMDB ID copy failed',
+  tvDbId: 'TVDb ID',
+  tvDbIdCopied: 'TVDb ID copied to clipboard',
+  tvDbIdCopyFailed: 'TVDb ID copy failed',
 });
 
 interface TvDetailsProps {
@@ -160,6 +166,44 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
   const closeBlocklistModal = useCallback(
     () => setShowBlocklistModal(false),
     []
+  );
+
+  const handleCopyImdbId = useCallback(
+    async (imdbId: string | undefined) => {
+      if (!imdbId) return;
+      try {
+        await navigator.clipboard.writeText(imdbId);
+        addToast(intl.formatMessage(messages.imdbIdCopied), {
+          appearance: 'success',
+          autoDismiss: true,
+        });
+      } catch (err) {
+        addToast(intl.formatMessage(messages.imdbIdCopyFailed), {
+          appearance: 'error',
+          autoDismiss: true,
+        });
+      }
+    },
+    [addToast, intl]
+  );
+
+  const handleCopyTvDbId = useCallback(
+    async (tvdbId: number | undefined) => {
+      if (!tvdbId) return;
+      try {
+        await navigator.clipboard.writeText(tvdbId.toString());
+        addToast(intl.formatMessage(messages.tvDbIdCopied), {
+          appearance: 'success',
+          autoDismiss: true,
+        });
+      } catch (err) {
+        addToast(intl.formatMessage(messages.tvDbIdCopyFailed), {
+          appearance: 'error',
+          autoDismiss: true,
+        });
+      }
+    },
+    [addToast, intl]
   );
 
   const { mediaUrl: plexUrl, mediaUrl4k: plexUrl4k } = useDeepLinks({
@@ -1276,6 +1320,44 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                         })}
                       </>
                     ))}
+                </span>
+              </div>
+            )}
+            {data.externalIds?.imdbId && (
+              <div className="media-fact">
+                <span>{intl.formatMessage(messages.imdbId)}</span>
+                <span
+                  className="media-fact-value cursor-pointer underline decoration-dotted underline-offset-2 transition hover:text-gray-200"
+                  onClick={() => handleCopyImdbId(data.externalIds?.imdbId)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCopyImdbId(data.externalIds?.imdbId);
+                    }
+                  }}
+                >
+                  {data.externalIds?.imdbId}
+                </span>
+              </div>
+            )}
+            {data.externalIds?.tvdbId && (
+              <div className="media-fact">
+                <span>{intl.formatMessage(messages.tvDbId)}</span>
+                <span
+                  className="media-fact-value cursor-pointer underline decoration-dotted underline-offset-2 transition hover:text-gray-200"
+                  onClick={() => handleCopyTvDbId(data.externalIds?.tvdbId)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCopyTvDbId(data.externalIds?.tvdbId);
+                    }
+                  }}
+                >
+                  {data.externalIds?.tvdbId}
                 </span>
               </div>
             )}
