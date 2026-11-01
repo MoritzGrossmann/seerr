@@ -1,0 +1,140 @@
+# .github/workflows/fork-release.yml
+# Baut deinen Seerr-Fork automatisch nach, sobald upstream ein neues Release taggt:
+# Patch-Branch auf den neuen Upstream-Tag rebasen -> gleichen Tag im Fork setzen -> Image nach Docker Hub + ghcr.io
+name: Fork Release (upstream sync)
+
+on:
+  schedule:
+    - cron: '17 4 * * *' # taeglich, prueft auf neues Upstream-Release
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Upstream-Tag, z. B. v3.5.1 (leer = neuestes Release)'
+        required: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: fork-release
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: seerr-team/seerr
+  PATCH_BRANCH: ids-patch # Branch mit deinen Commits (= Default-Branch des Forks)
+  DOCKER_HUB: moritzgrossmann/seerr
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      build: ${{ steps.check.outputs.build }}
+    steps:
+      - name: Upstream-Tag ermitteln
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="${INPUT_TAG:-$(gh release view --repo "$UPSTREAM" --json tagName -q .tagName)}"
+          echo "Upstream-Tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PATCH_BRANCH }}
+          fetch-depth: 0
+          # PAT noetig: der Rebase bringt Upstream-Aenderungen an .github/workflows mit,
+          # die der normale GITHUB_TOKEN nicht pushen darf.
+          token: ${{ secrets.FORK_PAT }}
+
+      - name: Tag im Fork schon vorhanden?
+        id: check
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "$TAG existiert bereits im Fork - nichts zu tun."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Patches auf neuen Upstream-Tag rebasen und taggen
+        if: steps.check.outputs.build == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream "https://github.com/$UPSTREAM.git"
+          # Upstream-Tag bewusst NICHT nach refs/tags holen, damit der Name fuer den eigenen Tag frei bleibt
+          git fetch upstream \
+            "+refs/heads/main:refs/remotes/upstream/main" \
+            "+refs/tags/$TAG:refs/upstream-tags/$TAG"
+
+          # Alte Basis = letzter Upstream-Commit, auf dem deine Patches liegen
+          BASE=$(git merge-base HEAD upstream/main)
+          echo "Rebase der Commits $(git rev-parse --short "$BASE")..HEAD auf $TAG"
+
+          if ! git rebase --onto "refs/upstream-tags/$TAG" "$BASE"; then
+            git rebase --abort
+            echo "::error::Rebase-Konflikt mit $TAG - bitte lokal aufloesen und Workflow erneut starten."
+            exit 1
+          fi
+
+          git push --force-with-lease origin "HEAD:$PATCH_BRANCH"
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"
+
+  build:
+    needs: sync
+    if: needs.sync.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.sync.outputs.tag }}
+
+      - name: Metadaten
+        id: meta
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "ts=$(git log -1 --pretty=%ct)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64 # bei Bedarf: linux/amd64,linux/arm64 (arm64 per QEMU ist langsam)
+          push: true
+          build-args: |
+            COMMIT_TAG=${{ steps.meta.outputs.sha }}
+            BUILD_VERSION=${{ needs.sync.outputs.tag }}
+            SOURCE_DATE_EPOCH=${{ steps.meta.outputs.ts }}
+          tags: |
+            ${{ env.DOCKER_HUB }}:${{ needs.sync.outputs.tag }}
+            ${{ env.DOCKER_HUB }}:latest
+            ${{ steps.meta.outputs.image }}:${{ needs.sync.outputs.tag }}
+            ${{ steps.meta.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
