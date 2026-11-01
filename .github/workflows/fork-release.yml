@@ -72,7 +72,7 @@ jobs:
 
           git remote add upstream "https://github.com/$UPSTREAM.git"
           # Upstream-Tag bewusst NICHT nach refs/tags holen, damit der Name fuer den eigenen Tag frei bleibt
-          git fetch upstream \
+          git fetch --no-tags upstream \
             "+refs/heads/main:refs/remotes/upstream/main" \
             "+refs/tags/$TAG:refs/upstream-tags/$TAG"
 
